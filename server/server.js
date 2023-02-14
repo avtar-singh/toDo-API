@@ -2,7 +2,7 @@ require("./config/config");
 
 const _ = require("lodash");
 const express = require("express");
-const bodyParser = require("body-parser");
+// const bodyParser = require("body-parser");
 const { ObjectId } = require("mongodb");
 
 var { mongoose } = require("./db/mongoose.js");
@@ -14,7 +14,8 @@ var { Todo } = require("./models/todo.js");
 var app = express();
 const port = process.env.PORT;
 
-app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.post('/todos', (req, res) => {
   var todo = new Todo({

@@ -1,33 +1,14 @@
-let chai = require('chai');
-let request = require("supertest");
-let { ObjectId } = require("mongodb");
+const chai = require('chai');
+const request = require("supertest");
+const { ObjectId } = require("mongodb");
 
-let app = require("./../server");
-let {Todo} = require('./../models/todo');
+const app = require("./../server");
+const { todos, users, populateTodos, populateUsers } = require('./seed/seed');
 
 let expect = chai.expect;
 
-const todos = [{
-  _id: new ObjectId(),
-  text: 'First test todo'
-}, {
-  _id: new ObjectId(),
-  text: 'Second test todo',
-  completed: true,
-  completedAt: 3434
-}];
-
-beforeEach((done) => {
-  Todo.deleteMany({})
-    .then(() => {
-      Todo.insertMany(todos);
-      done();
-    })
-    .catch((e) => {
-      return done(e);
-    });
-});
-
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 // TEST NEW TODO ITEM
 describe("POST /todos", () => {
@@ -168,7 +149,7 @@ describe("Delete Todo Item", () => {
 
 //TEST PATCH ITEM
 describe('Patch todo item', () => {
-  it("should update todo item", () => {
+  it("should update todo item", (done) => {
     var hexId = todos[0]._id.toHexString();
     var toBeUpdated = {
       'completed': true,
@@ -183,6 +164,41 @@ describe('Patch todo item', () => {
         expect(res.statusCode).to.equal(200);
         expect(res.body.todo.completed).to.equal(toBeUpdated.completed);
         expect(res.body.todo.completedAt).is.a("number");
+        done();
+      });
+  });
+});
+
+// Describe USER Authenticate Route
+describe('Check if User is valid', () => {
+  it('should return user if authenticate', (done) => {
+    const token = users[0].tokens[0].token;
+    request(app)
+      .get("/users/me")
+      .set("x-auth", token)
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .end((err, res) => {
+        expect(res.statusCode).to.equal(200);
+        expect(res.body._id).to.equal(users[0]._id.toHexString());
+        expect(res.body.email).to.equal(users[0].email);
+        done();
+      });
+  });
+
+  it('should return 401 if not authenticate', (done) => {
+    request(app)
+      .get("/users/me")
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .end((err, res) => {
+        expect(res.statusCode).to.equal(401);
+        expect(res.body).is.empty;
+        done();
+
+        if (err) {
+          return done(err);
+        }
       });
   });
 });
