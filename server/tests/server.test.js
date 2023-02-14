@@ -1,7 +1,7 @@
 const chai = require('chai');
 const request = require("supertest");
 const { ObjectId } = require("mongodb");
-
+const {User} = require("./../models/user");
 const app = require("./../server");
 const { todos, users, populateTodos, populateUsers } = require('./seed/seed');
 
@@ -252,3 +252,45 @@ describe('Adding new user', () => {
       });
   });
 }); 
+
+// TEST USER LOGIN
+describe('User login', () => {
+  it('should login if valid user', (done) => {
+    request(app).post('/users/login').send({
+      email: users[1].email,
+      password: users[1].password
+    }).expect(200).expect((res) => {
+      expect(res.headers["x-auth"]).to.be.a("string");
+    }).end((err, res) => {
+      if(err) {
+        return done(err);
+      }
+
+      User.findById((users[1]._id)).then((user) => {
+        expect(user.tokens[0]).to.include({
+          access: 'auth',
+          token: res.headers['x-auth']
+        });
+        done();
+      }).catch((e) => done(e));
+    });
+  });
+
+  it('should not login if invalid user', (done) => {
+    request(app)
+      .post("/users/login")
+      .send({
+        email: 'wrong.email@mail.com',
+        password: users[1].password,
+      })
+      .expect(400)
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+        expect(res.body).to.be.an("object").that.is.empty;
+        expect(res.headers["x-auth"]).to.be.undefined;
+        done();
+      });
+    });
+});
