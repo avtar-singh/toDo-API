@@ -163,13 +163,13 @@ describe('Patch todo item', () => {
       .end((err, res) => {
         expect(res.statusCode).to.equal(200);
         expect(res.body.todo.completed).to.equal(toBeUpdated.completed);
-        expect(res.body.todo.completedAt).is.a("number");
+        expect(res.body.todo.completedAt).to.be.a('number');
         done();
       });
   });
 });
 
-// Describe USER Authenticate Route
+// TEST USER AUTHENTICATION
 describe('Check if User is valid', () => {
   it('should return user if authenticate', (done) => {
     const token = users[0].tokens[0].token;
@@ -202,3 +202,53 @@ describe('Check if User is valid', () => {
       });
   });
 });
+
+
+//TEST NEW USER
+describe('Adding new user', () => {
+  it('should create a user', (done) => {
+    request(app)
+      .post("/user")
+      .send({ email: "john.doe3@test3.com", password: "test@123" })
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+        expect(res.statusCode).to.equal(200);
+        expect(res.body.email).to.equal("john.doe3@test3.com");
+        done();
+      });
+  });
+
+  it('should return validation error if request invalid', (done) => {
+    request(app)
+      .post("/user")
+      .send({ email: "john.dotest3.com", password: "tes21ds@t" })
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+        expect(res.statusCode).to.equal(400);
+        done();
+      });
+  });
+
+  it("should not create user if email already in use", (done) => {
+    request(app)
+      .post("/user")
+      .send({ email: process.env.SEED_EMAIL, password: "test@dssd12" })
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+        expect(res.statusCode).to.equal(400);
+        done();
+      });
+  });
+}); 
