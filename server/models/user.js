@@ -74,9 +74,8 @@ UserSchema.statics.findByToken = function (token) {
   } catch(e) {
     return Promise.reject();
   }
-
   return User.findOne({
-    _id: decoded._id,
+    _id: decoded.id,
     'tokens.token': token,
     'tokens.access': 'auth'
   });
@@ -93,6 +92,16 @@ UserSchema.methods.generateAuthToken = function () {
     return token;
   });
 
+};
+
+UserSchema.methods.removeToken = function(token) {
+  var user = this;
+
+  return user.updateOne({
+    $pull: {
+      tokens: {token}
+    }
+  });
 };
 
 UserSchema.pre('save', function (next) {
