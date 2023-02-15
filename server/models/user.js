@@ -66,18 +66,21 @@ UserSchema.statics.findByCredentials = function (email, password) {
 
 UserSchema.statics.findByToken = function (token) {
   var User = this;
-
-  var decoded;
-
+  var decoded,id = undefined;
   try {
     decoded = jwt.verify(token, process.env.SECRET_KEY);
   } catch(e) {
     return Promise.reject();
   }
-  return User.findOne({
-    _id: decoded.id,
-    'tokens.token': token,
-    'tokens.access': 'auth'
+
+  if(decoded) {
+    id = decoded.id ? decoded.id : decoded._id;
+  }
+
+  return User.find({
+    _id: id,
+    "tokens.token": token,
+    "tokens.access": "auth",
   });
 };
 
@@ -97,7 +100,7 @@ UserSchema.methods.generateAuthToken = function () {
 UserSchema.methods.removeToken = function(token) {
   var user = this;
 
-  return user.updateOne({
+  return user.update({
     $pull: {
       tokens: {token}
     }

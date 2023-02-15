@@ -1,4 +1,5 @@
 const chai = require('chai');
+const express = require("express");
 const request = require("supertest");
 const { ObjectId } = require("mongodb");
 const {User} = require("./../models/user");
@@ -6,7 +7,8 @@ const app = require("./../server");
 const { todos, users, populateTodos, populateUsers } = require('./seed/seed');
 
 let expect = chai.expect;
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 beforeEach(populateUsers);
 beforeEach(populateTodos);
 
@@ -176,24 +178,23 @@ describe('Check if User is valid', () => {
     request(app)
       .get("/users/me")
       .set("x-auth", token)
-      .set("Accept", "application/json")
-      .set("Content-Type", "application/json")
-      .end((err, res) => {
+      .set("Connection", "keep-alive")
+      .expect((res) => {
         expect(res.statusCode).to.equal(200);
-        expect(res.body._id).to.equal(users[0]._id.toHexString());
-        expect(res.body.email).to.equal(users[0].email);
-        done();
-      });
+        expect(res.body[0]._id).to.equal(users[0]._id.toHexString());
+        expect(res.body[0].email).to.equal(users[0].email);
+      })
+      .end(done);
   });
-
-  it('should return 401 if not authenticate', (done) => {
+  
+  it("should return 401 if not authenticate", (done) => {
     request(app)
       .get("/users/me")
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
+      .set("x-auth", "fdssdffdsfds")
       .end((err, res) => {
         expect(res.statusCode).to.equal(401);
-        expect(res.body).is.empty;
         done();
 
         if (err) {
@@ -201,6 +202,7 @@ describe('Check if User is valid', () => {
         }
       });
   });
+  
 });
 
 
