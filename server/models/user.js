@@ -77,7 +77,7 @@ UserSchema.statics.findByToken = function (token) {
     id = decoded.id ? decoded.id : decoded._id;
   }
 
-  return User.find({
+  return User.findOne({
     _id: id,
     "tokens.token": token,
     "tokens.access": "auth",
@@ -97,10 +97,10 @@ UserSchema.methods.generateAuthToken = function () {
 
 };
 
-UserSchema.methods.removeToken = function(token) {
+UserSchema.methods.removeToken = function (token) {
   var user = this;
-
-  return user.update({
+  
+  return user.updateOne({
     $pull: {
       tokens: {token}
     }

@@ -181,8 +181,8 @@ describe('Check if User is valid', () => {
       .set("Connection", "keep-alive")
       .expect((res) => {
         expect(res.statusCode).to.equal(200);
-        expect(res.body[0]._id).to.equal(users[0]._id.toHexString());
-        expect(res.body[0].email).to.equal(users[0].email);
+        expect(res.body._id).to.equal(users[0]._id.toHexString());
+        expect(res.body.email).to.equal(users[0].email);
       })
       .end(done);
   });
@@ -295,4 +295,27 @@ describe('User login', () => {
         done();
       });
     });
+});
+
+// TEST USER LOGOUT
+describe('User logout', () => {
+  it('should remove token on successful logout', (done) => {
+    const token = users[0].tokens[0].token;
+    request(app)
+      .delete("/users/me/token")
+      .set("x-auth", token)
+      .set("Connection", "keep-alive")
+      .end((err, res) => {
+        if (err) {
+          return done(err);
+        }
+
+        User.findById(users[0]._id)
+          .then((user) => {
+            expect(user.tokens.length).is.equal(0);
+            done();
+          })
+          .catch((e) => done(e));
+      });
+  });
 });
