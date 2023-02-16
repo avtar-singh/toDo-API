@@ -15,8 +15,10 @@ beforeEach(populateTodos);
 // TEST NEW TODO ITEM
 describe("POST /todos", () => {
   it("should create a new todo", (done) => {
+    const token = users[0].tokens[0].token;
     request(app)
       .post("/todos")
+      .set("x-auth", token)
       .send({ 'text': 'Test todo text'})
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
@@ -31,8 +33,10 @@ describe("POST /todos", () => {
   });
 
   it("should not create todo with invalid body data", (done) => {
+    const token = users[0].tokens[0].token;
     request(app)
       .post("/todos")
+      .set("x-auth", token)
       .send({})
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
@@ -47,11 +51,30 @@ describe("POST /todos", () => {
   });
 });
 
+// TEST FETCH TODO LIST
+describe("Fetch list of todos", () => {
+  it("should show todo list of authorized user", (done) => {
+    const token = users[0].tokens[0].token;
+    request(app)
+      .get("/todos")
+      .set("x-auth", token)
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .expect(200)
+      .end((err, res) => {
+        expect(res.body.todos.length).is.equal(1);
+        done();
+      });
+  });
+})
+
 // TEST FETCH TODO ITEM
 describe('Get Todo Item', () => {
   it('should fetch single item', (done) => {
+    const token = users[0].tokens[0].token;
     request(app)
       .get(`/todos/${todos[0]._id.toHexString()}`)
+      .set("x-auth", token)
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
       .end((err, res) => {
@@ -67,10 +90,23 @@ describe('Get Todo Item', () => {
     
   });
 
+  it('should not fetch another user item', (done) => {
+    const token = users[0].tokens[0].token;
+    request(app)
+      .get(`/todos/${todos[1]._id.toHexString()}`)
+      .set("x-auth", token)
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .expect(404)
+      .end(done);
+  });
+
   it('should return 404 if todo not found', (done) => {
     var hexId = new ObjectId().toHexString();
+    const token = users[0].tokens[0].token;
     request(app)
       .get(`/todos/${hexId}`)
+      .set("x-auth", token)
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
       .end((err, res) => {
@@ -84,8 +120,10 @@ describe('Get Todo Item', () => {
   });
 
   it('should return 404 for non object-id', (done) => {
+    const token = users[0].tokens[0].token;
     request(app)
       .get("/todos/abc")
+      .set("x-auth", token)
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
       .end((err, res) => {
@@ -102,9 +140,11 @@ describe('Get Todo Item', () => {
 //TEST DELETE ITEM
 describe("Delete Todo Item", () => {
   it("should fetch single item and delete", (done) => {
+    const token = users[1].tokens[0].token;
     var hexId = todos[1]._id.toHexString();
     request(app)
       .delete(`/todos/${hexId}`)
+      .set("x-auth", token)
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
       .end((err, res) => {
@@ -117,10 +157,24 @@ describe("Delete Todo Item", () => {
       });
   });
 
-  it("should return 404 if todo not found", (done) => {
-    var hexId = new ObjectId().toHexString();
+  it("should not delete item of another user", (done) => {
+    const token = users[1].tokens[0].token;
+    var hexId = todos[0]._id.toHexString();
     request(app)
       .delete(`/todos/${hexId}`)
+      .set("x-auth", token)
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .expect(404)
+      .end(done);
+  });
+
+  it("should return 404 if todo not found", (done) => {
+    var hexId = new ObjectId().toHexString();
+    const token = users[1].tokens[0].token;
+    request(app)
+      .delete(`/todos/${hexId}`)
+      .set("x-auth", token)
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
       .end((err, res) => {
@@ -134,8 +188,10 @@ describe("Delete Todo Item", () => {
   });
 
   it("should return 404 for non object-id", (done) => {
+    const token = users[1].tokens[0].token;
     request(app)
       .delete("/todos/abc")
+      .set("x-auth", token)
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
       .end((err, res) => {
@@ -152,6 +208,7 @@ describe("Delete Todo Item", () => {
 //TEST PATCH ITEM
 describe('Patch todo item', () => {
   it("should update todo item", (done) => {
+    const token = users[0].tokens[0].token;
     var hexId = todos[0]._id.toHexString();
     var toBeUpdated = {
       'completed': true,
@@ -160,12 +217,53 @@ describe('Patch todo item', () => {
     request(app)
       .patch(`/todos/${hexId}`)
       .send(toBeUpdated)
+      .set("x-auth", token)
       .set("Accept", "application/json")
       .set("Content-Type", "application/json")
       .end((err, res) => {
         expect(res.statusCode).to.equal(200);
         expect(res.body.todo.completed).to.equal(toBeUpdated.completed);
         expect(res.body.todo.completedAt).to.be.a('number');
+        done();
+      });
+  });
+
+  it("should not update todo item of another user", (done) => {
+    const token = users[0].tokens[0].token;
+    var hexId = todos[1]._id.toHexString();
+    var toBeUpdated = {
+      completed: true,
+      completedAt: new Date().getTime(),
+    };
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send(toBeUpdated)
+      .set("x-auth", token)
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .expect(404)
+      .end(done);
+  });
+
+  it("should clear completedAt when item is incomplete", (done) => {
+    var hexId = todos[0]._id.toHexString();
+    var toBeUpdated = {
+      completed: false,
+      text: "This should be new text",
+    };
+    const token = users[0].tokens[0].token;
+
+    request(app)
+      .patch(`/todos/${hexId}`)
+      .send(toBeUpdated)
+      .set("x-auth", token)
+      .set("Accept", "application/json")
+      .set("Content-Type", "application/json")
+      .end((err, res) => {
+        expect(200);
+        expect(res.body.todo.text).to.equal(toBeUpdated.text);
+        expect(res.body.todo.completed).to.equal(false);
+        expect(res.body.todo.completedAt).to.be.null;
         done();
       });
   });
@@ -258,24 +356,27 @@ describe('Adding new user', () => {
 // TEST USER LOGIN
 describe('User login', () => {
   it('should login if valid user', (done) => {
-    request(app).post('/users/login').send({
-      email: users[1].email,
-      password: users[1].password
-    }).expect(200).expect((res) => {
-      expect(res.headers["x-auth"]).to.be.a("string");
-    }).end((err, res) => {
-      if(err) {
-        return done(err);
-      }
+    request(app)
+      .post('/users/login')
+      .send({
+        email: users[1].email,
+        password: users[1].password
+      })
+      .expect(200).expect((res) => {
+        expect(res.headers["x-auth"]).to.be.a("string");
+      }).end((err, res) => {
+        if(err) {
+          return done(err);
+        }
 
-      User.findById((users[1]._id)).then((user) => {
-        expect(user.tokens[0]).to.include({
-          access: 'auth',
-          token: res.headers['x-auth']
-        });
-        done();
-      }).catch((e) => done(e));
-    });
+        User.findById((users[1]._id)).then((user) => {
+          expect(user.tokens[1]).to.include({
+            access: 'auth',
+            token: res.headers['x-auth']
+          });
+          done();
+        }).catch((e) => done(e));
+      });
   });
 
   it('should not login if invalid user', (done) => {
